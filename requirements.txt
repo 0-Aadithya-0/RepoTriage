@@ -1,0 +1,33 @@
+# =============================================================================
+# RepoTriage - Production Dependencies
+# =============================================================================
+# Python 3.12+
+# =============================================================================
+
+# Web framework
+fastapi>=0.142.0,<0.143.0
+
+# ASGI server
+uvicorn[standard]>=0.30.0
+
+# Data validation
+pydantic>=2.13.0,<3.0.0
+pydantic-settings>=2.15.0,<3.0.0
+
+# Async HTTP client (GitHub API calls + FastAPI test client)
+httpx>=0.28.0,<0.29.0
+
+# LLM providers
+google-genai>=1.0.0
+
+# Retry logic
+tenacity>=9.0.0,<10.0.0
+
+# YAML configuration
+PyYAML>=6.0
+
+# .env file support (loaded by pydantic-settings)
+python-dotenv>=1.0.0
+
+# Structured JSON logging
+python-json-logger>=3.0.0

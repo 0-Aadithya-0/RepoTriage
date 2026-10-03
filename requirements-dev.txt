@@ -1,0 +1,15 @@
+# =============================================================================
+# RepoTriage - Development/Test Dependencies
+# =============================================================================
+# Install after production deps:  pip install -r requirements-dev.txt
+# =============================================================================
+
+# Include production dependencies
+-r requirements.txt
+
+# Testing
+pytest>=8.4.0
+pytest-asyncio>=1.4.0,<2.0.0
+
+# Test coverage
+pytest-cov>=6.0.0
