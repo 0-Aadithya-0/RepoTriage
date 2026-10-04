@@ -66,10 +66,12 @@ class CohereProvider(LLMProvider):
         @retry_decorator
         async def _call_api() -> IssueAnalysis:
             try:
-                response = await self._client.chat(
+                response = await self._client.v2.chat(
                     model=self._settings.llm_model,
-                    message=user_prompt,
-                    preamble=system_prompt,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
                     response_format={
                         "type": "json_object",
                         "schema": IssueAnalysis.model_json_schema()
@@ -77,7 +79,7 @@ class CohereProvider(LLMProvider):
                 )
                 
                 # Parse the guaranteed JSON text into our Pydantic model
-                return IssueAnalysis.model_validate_json(response.text)
+                return IssueAnalysis.model_validate_json(response.message.content[0].text)
 
             except cohere.errors.UnauthorizedError as exc:
                 raise LLMAuthenticationError(

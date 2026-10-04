@@ -56,7 +56,7 @@ class Settings(BaseSettings):
         description="Active LLM provider: 'gemini' or 'cohere'.",
     )
     llm_model: str = Field(
-        default="command-a",
+        default="command-a-plus-05-2026",
         description="Model identifier for the selected LLM provider.",
     )
     llm_timeout_seconds: float = Field(
