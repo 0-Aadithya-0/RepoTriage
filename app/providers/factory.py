@@ -46,12 +46,14 @@ def create_llm_provider(settings: Settings) -> LLMProvider:
     match provider:
         case "gemini":
             return _create_gemini_provider(settings)
+        case "cohere":
+            return _create_cohere_provider(settings)
         case _:
-            # This should be unreachable due to Literal["gemini"]
-            # validation in Settings, but we handle it defensively.
+            # This should be unreachable due to validation in Settings,
+            # but we handle it defensively.
             raise ConfigurationError(
                 f"Unsupported LLM provider: '{provider}'. "
-                "Supported providers: 'gemini'."
+                "Supported providers: 'gemini', 'cohere'."
             )
 
 
@@ -69,4 +71,19 @@ def _create_gemini_provider(settings: Settings) -> LLMProvider:
         model=settings.llm_model,
         timeout=settings.llm_timeout_seconds,
         max_retries=settings.llm_max_retries,
+    )
+
+
+def _create_cohere_provider(settings: Settings) -> LLMProvider:
+    """Create and return a Cohere provider adapter.
+
+    Lazily imports the Cohere adapter module. API key presence is
+    guaranteed by the Settings model validation.
+    """
+    # Lazy import
+    from app.providers.cohere_provider import CohereProvider
+
+    return CohereProvider(
+        api_key=settings.cohere_api_key.get_secret_value(),
+        settings=settings,
     )

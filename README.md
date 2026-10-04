@@ -218,14 +218,13 @@ $env:PYTHONPATH="."; ..\.venv\Scripts\python.exe -m pytest tests/ -m "not e2e" -
 | `config.py` | 25 | 0 | **100%** |
 | `exceptions.py` | 25 | 0 | **100%** |
 | `factory.py` | 16 | 0 | **100%** |
-| `gemini_provider.py` | 54 | 1 | **98%** |
+| `gemini_provider.py` | 54 | 0 | **100%** |
+| `main.py` | 35 | 0 | **100%** |
 | `error_handlers.py` | 78 | 3 | **96%** |
 | `prompt_loader.py` | 35 | 3 | **91%** |
-| `main.py` | 35 | 35 | 0%* |
-| **TOTAL** | **510** | **42** | **92%** |
+| **TOTAL** | **510** | **6** | **99%** |
 
-> *`main.py` at 0%: the production lifespan is intentionally excluded from unit tests
-> (mocks are injected directly into `app.state`). It is exercised by the E2E suite.
+> Note: Running only unit tests (`-m "not e2e"`) yields 92% coverage because the production lifespan in `main.py` is excluded. Running the full suite exercises the live app and brings coverage to 99%.
 
 ---
 

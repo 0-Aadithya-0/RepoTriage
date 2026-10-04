@@ -51,12 +51,12 @@ class Settings(BaseSettings):
     )
 
     # ---- LLM ----------------------------------------------------------------
-    llm_provider: Literal["gemini"] = Field(
-        default="gemini",
-        description="Active LLM provider: 'gemini'.",
+    llm_provider: Literal["gemini", "cohere"] = Field(
+        default="cohere",
+        description="Active LLM provider: 'gemini' or 'cohere'.",
     )
     llm_model: str = Field(
-        default="gemini-2.5-flash",
+        default="command-a",
         description="Model identifier for the selected LLM provider.",
     )
     llm_timeout_seconds: float = Field(
@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr | None = Field(
         default=None,
         description="Google Gemini API key. Required when llm_provider='gemini'.",
+    )
+    cohere_api_key: SecretStr | None = Field(
+        default=None,
+        description="Cohere API key. Required when llm_provider='cohere'.",
     )
 
     # ---- Prompt configuration -----------------------------------------------
@@ -107,5 +111,9 @@ class Settings(BaseSettings):
         if self.llm_provider == "gemini" and not self.gemini_api_key:
             raise ValueError(
                 "GEMINI_API_KEY is required when LLM_PROVIDER is 'gemini'."
+            )
+        if self.llm_provider == "cohere" and not self.cohere_api_key:
+            raise ValueError(
+                "COHERE_API_KEY is required when LLM_PROVIDER is 'cohere'."
             )
         return self
