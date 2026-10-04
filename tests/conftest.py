@@ -33,6 +33,7 @@ def clean_env() -> Generator[None, None, None]:
         "LLM_MAX_RETRIES",
         "OPENAI_API_KEY",
         "GEMINI_API_KEY",
+        "COHERE_API_KEY",
         "PROMPTS_FILE",
         "MAX_ISSUE_BODY_LENGTH",
     ]

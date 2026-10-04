@@ -16,9 +16,9 @@ from app.core.config import Settings
 class TestSettingsDefaults:
     """Verify default values when minimal environment is set."""
 
-    def test_defaults_with_gemini_key(self, clean_env: None) -> None:
-        """With only GEMINI_API_KEY set, all defaults should apply."""
-        os.environ["GEMINI_API_KEY"] = "gemini-test-key"
+    def test_defaults_with_cohere_key(self, clean_env: None) -> None:
+        """With only COHERE_API_KEY set, all defaults should apply."""
+        os.environ["COHERE_API_KEY"] = "cohere-test-key"
         settings = Settings(_env_file=None)  # type: ignore[call-arg]
 
         assert settings.app_name == "RepoTriage"
@@ -27,8 +27,8 @@ class TestSettingsDefaults:
         assert settings.github_api_base_url == "https://api.github.com"
         assert settings.github_api_version == "2026-03-10"
         assert settings.github_timeout_seconds == 15.0
-        assert settings.llm_provider == "gemini"
-        assert settings.llm_model == "gemini-2.5-flash"
+        assert settings.llm_provider == "cohere"
+        assert settings.llm_model == "command-a-plus-05-2026"
         assert settings.llm_timeout_seconds == 30.0
         assert settings.llm_max_concurrency == 3
         assert settings.llm_max_retries == 3
@@ -36,7 +36,7 @@ class TestSettingsDefaults:
         assert settings.max_issue_body_length == 4096
 
     def test_github_token_defaults_to_none(self, clean_env: None) -> None:
-        os.environ["GEMINI_API_KEY"] = "gemini-test-key"
+        os.environ["COHERE_API_KEY"] = "cohere-test-key"
         settings = Settings(_env_file=None)  # type: ignore[call-arg]
         assert settings.github_token is None
 

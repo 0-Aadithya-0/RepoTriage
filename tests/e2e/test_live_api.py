@@ -1,8 +1,9 @@
 """
 End-to-end tests for RepoTriage.
 
-These tests make REAL network requests to the GitHub API and the Gemini API.
-They require a valid GEMINI_API_KEY in the environment (or .env file).
+These tests make REAL network requests to the GitHub API and the configured
+LLM provider. They require the selected provider's API key in the environment
+(or .env file).
 
 Run only e2e tests:
     pytest -m e2e -v
@@ -22,12 +23,12 @@ import pytest
 # Load .env before importing Settings so the API key is available
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass
 
 from app.main import create_app
-
 
 # ---------------------------------------------------------------------------
 # Skip guard: skip all live tests if no real API key is present
@@ -35,14 +36,14 @@ from app.main import create_app
 
 pytestmark = pytest.mark.e2e
 
-_has_real_key = bool(
-    os.environ.get("GEMINI_API_KEY")
-    and not os.environ.get("GEMINI_API_KEY", "").startswith("your_")
-)
+_provider = os.environ.get("LLM_PROVIDER", "cohere").lower()
+_key_name = "COHERE_API_KEY" if _provider == "cohere" else "GEMINI_API_KEY"
+_key_value = os.environ.get(_key_name, "")
+_has_real_key = bool(_key_value and not _key_value.startswith("your_"))
 
 requires_real_key = pytest.mark.skipif(
     not _has_real_key,
-    reason="GEMINI_API_KEY not set or is a placeholder — skipping live e2e test",
+    reason=f"{_key_name} not set or is a placeholder — skipping live e2e test",
 )
 
 
@@ -79,7 +80,6 @@ async def live_client():
 
 
 class TestLiveHealth:
-
     async def test_health_endpoint_is_reachable(
         self, live_client: httpx.AsyncClient
     ) -> None:
@@ -95,7 +95,6 @@ class TestLiveHealth:
 
 
 class TestLiveAnalysis:
-
     @requires_real_key
     async def test_live_analysis_fastapi_repo(
         self, live_client: httpx.AsyncClient
@@ -124,10 +123,16 @@ class TestLiveAnalysis:
         # the important thing is the response is well-formed, not that it has data.
         assert isinstance(data["issues"], list)
         assert isinstance(data["failures"], list)
-        assert data["analyzed_count"] + data["failed_count"] == len(data["issues"]) + len(data["failures"])
+        assert data["analyzed_count"] + data["failed_count"] == len(
+            data["issues"]
+        ) + len(data["failures"])
 
         valid_categories = {
-            "Bug", "Feature Request", "Documentation", "Support Question", "Other"
+            "Bug",
+            "Feature Request",
+            "Documentation",
+            "Support Question",
+            "Other",
         }
         valid_priorities = {"Critical", "High", "Medium", "Low"}
 
@@ -147,9 +152,7 @@ class TestLiveAnalysis:
             )
 
     @requires_real_key
-    async def test_limit_is_respected(
-        self, live_client: httpx.AsyncClient
-    ) -> None:
+    async def test_limit_is_respected(self, live_client: httpx.AsyncClient) -> None:
         """The number of analyzed + failed issues never exceeds the requested limit."""
         limit = 2
         resp = await live_client.post(
@@ -178,9 +181,12 @@ class TestLiveAnalysis:
         data = resp.json()
 
         required_fields = {
-            "repository", "requested_limit",
-            "analyzed_count", "failed_count",
-            "issues", "failures",
+            "repository",
+            "requested_limit",
+            "analyzed_count",
+            "failed_count",
+            "issues",
+            "failures",
         }
         for field in required_fields:
             assert field in data, f"Missing required response field: '{field}'"
@@ -192,7 +198,6 @@ class TestLiveAnalysis:
 
 
 class TestLiveErrorHandling:
-
     async def test_nonexistent_repo_returns_404(
         self, live_client: httpx.AsyncClient
     ) -> None:

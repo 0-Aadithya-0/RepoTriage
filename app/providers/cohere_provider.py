@@ -1,6 +1,4 @@
-import json
 import logging
-from typing import Any
 
 import cohere
 from pydantic import ValidationError
@@ -55,7 +53,8 @@ class CohereProvider(LLMProvider):
 
         # Create a dynamic retry decorator using settings
         retry_decorator = retry(
-            stop=stop_after_attempt(self._settings.llm_max_retries),
+            # llm_max_retries counts retries after the initial request.
+            stop=stop_after_attempt(self._settings.llm_max_retries + 1),
             wait=wait_exponential(multiplier=1, min=2, max=10),
             retry=retry_if_exception_type(
                 (LLMRateLimitError, LLMTimeoutError, LLMServerError)
@@ -72,31 +71,48 @@ class CohereProvider(LLMProvider):
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    response_format={
-                        "type": "json_object",
-                        "schema": IssueAnalysis.model_json_schema()
-                    },
+                    response_format=cohere.JsonObjectResponseFormatV2(
+                        json_schema=IssueAnalysis.model_json_schema(),
+                    ),
                 )
-                
-                # Parse the guaranteed JSON text into our Pydantic model
-                return IssueAnalysis.model_validate_json(response.message.content[0].text)
+
+                # Command A reasoning models can return a thinking block before
+                # the final text block. Only text content contains the JSON.
+                text_parts = [
+                    item.text
+                    for item in response.message.content
+                    if isinstance(getattr(item, "text", None), str)
+                ]
+                if not text_parts:
+                    raise LLMResponseParseError("Cohere returned no text content.")
+
+                return IssueAnalysis.model_validate_json("".join(text_parts))
 
             except cohere.errors.UnauthorizedError as exc:
-                raise LLMAuthenticationError(
-                    f"Authentication failed: {exc.message}"
-                ) from exc
+                raise LLMAuthenticationError(f"Authentication failed: {exc}") from exc
             except cohere.errors.TooManyRequestsError as exc:
                 raise LLMRateLimitError(
                     "Cohere rate limit exceeded", retry_after=5
                 ) from exc
-            except (cohere.errors.ServiceUnavailableError, cohere.errors.InternalServerError) as exc:
-                raise LLMServerError(f"Cohere server error: {exc.message}") from exc
+            except (
+                cohere.errors.ServiceUnavailableError,
+                cohere.errors.InternalServerError,
+            ) as exc:
+                raise LLMServerError(f"Cohere server error: {exc}") from exc
             except cohere.errors.GatewayTimeoutError as exc:
                 raise LLMTimeoutError("Connection to Cohere failed") from exc
             except ValidationError as exc:
                 raise LLMResponseParseError(
                     f"Failed to parse Cohere response into IssueAnalysis: {exc}"
                 ) from exc
+            except (
+                LLMAuthenticationError,
+                LLMRateLimitError,
+                LLMResponseParseError,
+                LLMServerError,
+                LLMTimeoutError,
+            ):
+                raise
             except Exception as exc:
                 if "timeout" in str(exc).lower():
                     raise LLMTimeoutError("Cohere request timed out") from exc
@@ -123,12 +139,10 @@ class CohereProvider(LLMProvider):
 
         return "\n".join(lines)
 
-    def _build_user_prompt(
-        self, issue: GitHubIssue, config: PromptConfig
-    ) -> str:
+    def _build_user_prompt(self, issue: GitHubIssue, config: PromptConfig) -> str:
         """Construct the user message containing the issue content."""
         body_text = issue.body or "No description provided."
-        
+
         # Truncate body if it exceeds the configured limit
         if len(body_text) > self._settings.max_issue_body_length:
             truncated_len = self._settings.max_issue_body_length

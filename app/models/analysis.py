@@ -58,6 +58,8 @@ class IssueAnalysis(BaseModel):
         description="The priority level based on impact and severity."
     )
     tldr_summary: str = Field(
+        min_length=10,
+        max_length=256,
         description=(
             "A concise one-sentence technical summary of the core issue or request. "
             "Must be useful to a repository maintainer. No speculation or unsupported solutions."
