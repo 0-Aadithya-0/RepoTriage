@@ -180,7 +180,12 @@ GEMINI_API_KEY=your_actual_api_key_here
 
 ---
 
-## Running the Server
+## Running the Application
+
+The backend and frontend run as separate processes. Keep both terminals open
+while using the dashboard.
+
+### 1. Start the FastAPI Backend
 
 ```bash
 python -m uvicorn app.main:app --reload --port 8000
@@ -190,6 +195,32 @@ The server starts at **http://127.0.0.1:8000**
 
 - **Interactive API docs**: http://127.0.0.1:8000/docs
 - **Health check**: http://127.0.0.1:8000/health
+
+### 2. Start the Streamlit Frontend
+
+Open a second terminal in the project root and activate the same virtual
+environment.
+
+**Windows PowerShell:**
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+**macOS/Linux:**
+
+```bash
+source .venv/bin/activate
+```
+
+Start the dashboard:
+
+```bash
+python -m streamlit run frontend/app.py
+```
+
+The frontend opens at **http://localhost:8501** and communicates with the
+FastAPI backend at **http://127.0.0.1:8000**.
 
 ---
 
