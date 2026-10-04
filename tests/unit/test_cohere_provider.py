@@ -89,6 +89,11 @@ async def test_ignores_thinking_block_and_parses_text(
     assert result.priority_level is IssuePriority.MEDIUM
     assert result.tldr_summary == payload["tldr_summary"]
 
+    response_format = provider._client.v2.chat.await_args.kwargs["response_format"]
+    summary_schema = response_format.json_schema["properties"]["tldr_summary"]
+    assert "minLength" not in summary_schema
+    assert "maxLength" not in summary_schema
+
 
 async def test_missing_text_block_raises_parse_error(
     provider: CohereProvider,
@@ -106,4 +111,28 @@ async def test_missing_text_block_raises_parse_error(
     provider._client.v2.chat = AsyncMock(return_value=response)
 
     with pytest.raises(LLMResponseParseError, match="no text content"):
+        await provider.analyze_issue(issue, prompt_config)
+
+
+async def test_local_validation_still_enforces_summary_length(
+    provider: CohereProvider,
+    issue: GitHubIssue,
+    prompt_config: PromptConfig,
+) -> None:
+    payload = {
+        "category": IssueCategory.BUG.value,
+        "priority_level": IssuePriority.MEDIUM.value,
+        "tldr_summary": "Too short",
+    }
+    response = SimpleNamespace(
+        message=SimpleNamespace(
+            content=[
+                SimpleNamespace(type="text", text=json.dumps(payload)),
+            ]
+        )
+    )
+    provider._client = MagicMock()
+    provider._client.v2.chat = AsyncMock(return_value=response)
+
+    with pytest.raises(LLMResponseParseError, match="Failed to parse"):
         await provider.analyze_issue(issue, prompt_config)

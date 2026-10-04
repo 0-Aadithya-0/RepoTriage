@@ -24,6 +24,11 @@ from app.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 
+# Cohere Structured Outputs supports only a subset of JSON Schema.
+# Keep these constraints in the Pydantic model for local validation, but
+# remove them from the schema sent to Cohere.
+_COHERE_UNSUPPORTED_SCHEMA_KEYS = frozenset({"minLength", "maxLength"})
+
 
 class CohereProvider(LLMProvider):
     """Cohere implementation of the LLMProvider protocol.
@@ -72,7 +77,7 @@ class CohereProvider(LLMProvider):
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format=cohere.JsonObjectResponseFormatV2(
-                        json_schema=IssueAnalysis.model_json_schema(),
+                        json_schema=self._build_response_schema(),
                     ),
                 )
 
@@ -101,6 +106,14 @@ class CohereProvider(LLMProvider):
                 raise LLMServerError(f"Cohere server error: {exc}") from exc
             except cohere.errors.GatewayTimeoutError as exc:
                 raise LLMTimeoutError("Connection to Cohere failed") from exc
+            except cohere.errors.BadRequestError as exc:
+                logger.warning(
+                    "Cohere rejected the structured-output request",
+                    extra={"error_type": type(exc).__name__},
+                )
+                raise LLMResponseParseError(
+                    "Cohere rejected the structured-output schema."
+                ) from exc
             except ValidationError as exc:
                 raise LLMResponseParseError(
                     f"Failed to parse Cohere response into IssueAnalysis: {exc}"
@@ -119,6 +132,24 @@ class CohereProvider(LLMProvider):
                 raise LLMServerError(f"Unexpected Cohere error: {exc}") from exc
 
         return await _call_api()
+
+    @staticmethod
+    def _build_response_schema() -> dict[str, object]:
+        """Build a Cohere-compatible schema while retaining local constraints."""
+        schema = IssueAnalysis.model_json_schema()
+
+        def remove_unsupported_constraints(value: object) -> None:
+            if isinstance(value, dict):
+                for key in _COHERE_UNSUPPORTED_SCHEMA_KEYS:
+                    value.pop(key, None)
+                for child in value.values():
+                    remove_unsupported_constraints(child)
+            elif isinstance(value, list):
+                for child in value:
+                    remove_unsupported_constraints(child)
+
+        remove_unsupported_constraints(schema)
+        return schema
 
     def _build_system_prompt(self, config: PromptConfig) -> str:
         """Construct the system preamble from the prompt configuration."""
