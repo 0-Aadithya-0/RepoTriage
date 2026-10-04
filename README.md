@@ -81,43 +81,109 @@ repotriage/
 ### 1. Prerequisites
 
 - Python 3.12+
-- A virtual environment (`.venv` already exists if you've been following along)
-- A **Gemini API key** from [Google AI Studio](https://aistudio.google.com/app/apikey)
+- `pip`, included with a standard Python installation
+- An API key for the configured LLM provider:
+  - **Cohere** (the default provider), or
+  - **Gemini** from [Google AI Studio](https://aistudio.google.com/app/apikey)
 - (Optional) A **GitHub Personal Access Token** for higher rate limits
 
-### 2. Install Dependencies
+### 2. Create and Activate the Virtual Environment
+
+Run the following commands from the project root.
+
+**Windows PowerShell:**
 
 ```powershell
-# From the repotriage/ directory
-..\.venv\Scripts\pip install -r requirements.txt
-..\.venv\Scripts\pip install -r requirements-dev.txt
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Configure Environment
+**Windows Command Prompt:**
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+**macOS/Linux:**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+After activation, the terminal prompt should begin with `(.venv)`. You can
+confirm that the environment is active with:
+
+```bash
+python --version
+python -m pip --version
+```
+
+> If PowerShell blocks the activation script, run
+> `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` in the current
+> terminal, then activate the environment again.
+
+### 3. Install Dependencies
+
+With `.venv` activated:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
+```
+
+`requirements-dev.txt` already includes the production requirements, so for
+development you may install only that file:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+When returning to the project later, activate `.venv` again before running the
+server, frontend, or tests. Run `deactivate` to leave the environment.
+
+### 4. Configure Environment
 
 ```powershell
-# Copy the template
+# Windows PowerShell
 copy .env.example .env
 
-# Edit .env and fill in your GEMINI_API_KEY
+# Edit .env and add the API key for your selected provider
 # Optionally uncomment GITHUB_TOKEN for higher rate limits
 notepad .env
 ```
 
-Your `.env` should look like:
+On macOS/Linux, copy the template with:
+
+```bash
+cp .env.example .env
+```
+
+For the default Cohere provider, your `.env` should include:
 
 ```env
+LLM_PROVIDER=cohere
+LLM_MODEL=command-a-plus-05-2026
+COHERE_API_KEY=your_actual_cohere_api_key
+# GITHUB_TOKEN=github_token_for_public_repositories
+```
+
+To use Gemini instead:
+
+```env
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-3.8-flash
 GEMINI_API_KEY=your_actual_api_key_here
-# GITHUB_TOKEN=ghp_your_token_here  (optional, recommended)
 ```
 
 ---
 
 ## Running the Server
 
-```powershell
-# From the repotriage/ directory
-..\.venv\Scripts\uvicorn app.main:app --reload --port 8000
+```bash
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
 The server starts at **http://127.0.0.1:8000**
